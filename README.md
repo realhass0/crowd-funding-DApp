@@ -2,9 +2,7 @@
 
 A decentralized crowdfunding application built with Solidity, Hardhat, Next.js, and ethers.js. This DApp allows users to create campaigns, contribute funds, add rewards, and manage withdrawals/refunds in a transparent, blockchain-based system.
 
-**Live Application**: [https://crowdfundiing-dapp.vercel.app/](https://crowdfundiing-dapp.vercel.app/)
-
-**Repository**: [https://github.com/AlexKalll/crowd-funding-DApp](https://github.com/AlexKalll/crowd-funding-DApp)
+**Live Application**: [https://crowdfundiing-dapp.vercel.app](https://crowdfundiing-dapp.vercel.app)
 
 ## Features
 
@@ -514,12 +512,6 @@ npm run lint
 - Ensure contract address is correct for the network
 - Check MetaMask transaction history
 
-**Reward status not updating**
-- Refresh the page after transactions
-- Check browser console for errors
-- Ensure network connection is stable
-- Verify the transaction was confirmed on the blockchain
-
 **Docker build fails**
 - Ensure Docker is installed and running
 - Check that Node.js version in Dockerfile matches your local version
@@ -531,10 +523,6 @@ npm run lint
 - Check that your code follows linting rules
 - Verify all dependencies are in package.json
 - Check Actions tab for detailed error logs
-
-## License
-
-ISC
 
 ## Contributing
 
