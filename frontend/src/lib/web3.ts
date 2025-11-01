@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
-import deployments from "@/constants/deployments.localhost.json";
+import deploymentsLocalhost from "@/constants/deployments.localhost.json";
+import deploymentsSepolia from "@/constants/deployments.sepolia.json";
 import crowdfundArtifact from "@/constants/Crowdfund.json";
 
 // Minimal EIP-1193 provider shape
@@ -25,13 +26,46 @@ export async function getSigner(): Promise<ethers.Signer | null> {
 	return await provider.getSigner();
 }
 
-export function getCrowdfundAddress(): string | undefined {
-	return (deployments as unknown as DeploymentsFile)?.Crowdfund?.address;
+/**
+ * Get the contract address based on the current network
+ * Falls back to localhost if network not detected or not supported
+ */
+export async function getCrowdfundAddress(): Promise<string | undefined> {
+	try {
+		const provider = getBrowserProvider();
+		if (!provider) {
+			// Fallback to localhost if no provider
+			return (deploymentsLocalhost as unknown as DeploymentsFile)?.Crowdfund?.address;
+		}
+
+		const network = await provider.getNetwork();
+		const chainId = Number(network.chainId);
+
+		// Sepolia testnet
+		if (chainId === 11155111) {
+			const address = (deploymentsSepolia as unknown as DeploymentsFile)?.Crowdfund?.address;
+			// Only return if address is set (not the default placeholder)
+			if (address && address !== "0x0000000000000000000000000000000000000000") {
+				return address;
+			}
+		}
+
+		// Localhost / Hardhat
+		if (chainId === 31337 || chainId === 1337) {
+			return (deploymentsLocalhost as unknown as DeploymentsFile)?.Crowdfund?.address;
+		}
+
+		// Default to localhost for development
+		return (deploymentsLocalhost as unknown as DeploymentsFile)?.Crowdfund?.address;
+	} catch {
+		// Fallback to localhost on error
+		return (deploymentsLocalhost as unknown as DeploymentsFile)?.Crowdfund?.address;
+	}
 }
 
 export async function getCrowdfundReadContract(): Promise<ethers.Contract | null> {
 	const provider = getBrowserProvider();
-	const address = getCrowdfundAddress();
+	const address = await getCrowdfundAddress();
 	if (!provider || !address) return null;
 	try {
 		const code = await provider.getCode(address);
@@ -44,7 +78,7 @@ export async function getCrowdfundReadContract(): Promise<ethers.Contract | null
 
 export async function getCrowdfundWriteContract(): Promise<ethers.Contract | null> {
 	const signer = await getSigner();
-	const address = getCrowdfundAddress();
+	const address = await getCrowdfundAddress();
 	if (!signer || !address) return null;
 	try {
 		const provider = (signer.provider ?? await getBrowserProvider());

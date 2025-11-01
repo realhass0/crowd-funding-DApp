@@ -3,4 +3,7 @@ cache
 artifacts
 dist
 .env
+.env.local
+.env.*.local
 typechain-types
+*.log
