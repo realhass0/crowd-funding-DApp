@@ -297,6 +297,72 @@ git push origin main
    - Wait for build to complete
    - Access your live URL
 
+## Docker Deployment
+
+### Using Docker (Optional)
+
+Docker allows you to run the application in a container, making it easy to deploy anywhere.
+
+#### Build Docker Image
+
+```bash
+docker build -t crowdfunding-dapp .
+```
+
+#### Run Docker Container
+
+```bash
+docker run -p 3000:3000 crowdfunding-dapp
+```
+
+The app will be available at `http://localhost:3000`
+
+#### Using Docker Compose
+
+For easier management:
+
+```bash
+docker-compose up
+```
+
+This will build and run the frontend container automatically.
+
+Note: For local development, you still need to run Hardhat node separately as it's not included in the Docker setup.
+
+## GitHub Actions CI/CD
+
+The project includes GitHub Actions workflows that automatically:
+
+1. **Test Smart Contracts** (`.github/workflows/ci.yml`):
+   - Runs on every push and pull request
+   - Compiles contracts
+   - Runs test suite
+   - Ensures code quality
+
+2. **Lint and Build Frontend** (`.github/workflows/ci.yml`):
+   - Runs on every push and pull request
+   - Checks code style with ESLint
+   - Verifies the frontend builds successfully
+
+3. **Deploy Contract** (`.github/workflows/deploy-contract.yml`):
+   - Manual workflow for deploying to Sepolia
+   - Requires GitHub Secrets to be set up:
+     - `SEPOLIA_RPC_URL`: Your Sepolia RPC endpoint
+     - `PRIVATE_KEY`: Your deployment account private key
+
+### Setting Up GitHub Secrets
+
+To use the deployment workflow:
+
+1. Go to your GitHub repository
+2. Click Settings → Secrets and variables → Actions
+3. Click "New repository secret"
+4. Add:
+   - Name: `SEPOLIA_RPC_URL`, Value: Your Sepolia RPC URL
+   - Name: `PRIVATE_KEY`, Value: Your private key (with Sepolia ETH)
+
+5. Go to Actions tab → Deploy Contract to Sepolia → Run workflow
+
 ## Project Structure
 
 ```
@@ -332,7 +398,13 @@ crowd-funding-DApp/
 │   │   └── types.ts               # TypeScript interfaces
 │   ├── package.json
 │   └── next.config.ts
+├── .github/
+│   └── workflows/
+│       ├── ci.yml                 # CI workflow
+│       └── deploy-contract.yml    # Deployment workflow
 ├── hardhat.config.ts
+├── Dockerfile                     # Docker configuration
+├── docker-compose.yml            # Docker Compose configuration
 ├── package.json
 └── README.md
 ```
@@ -447,6 +519,18 @@ npm run lint
 - Check browser console for errors
 - Ensure network connection is stable
 - Verify the transaction was confirmed on the blockchain
+
+**Docker build fails**
+- Ensure Docker is installed and running
+- Check that Node.js version in Dockerfile matches your local version
+- Verify all dependencies are correctly listed in package.json
+- Check Docker logs for specific error messages
+
+**GitHub Actions fails**
+- Ensure all tests pass locally first
+- Check that your code follows linting rules
+- Verify all dependencies are in package.json
+- Check Actions tab for detailed error logs
 
 ## License
 
