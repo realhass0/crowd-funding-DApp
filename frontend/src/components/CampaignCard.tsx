@@ -159,9 +159,11 @@ export default function CampaignCard({ campaign, currentTime, onSelect, userAddr
           <div className="text-sm text-black">
               <span className="font-bold">Creator:</span> 
               <span className="font-medium text-black">
-                {campaign.creator && typeof campaign.creator === 'string' 
-                  ? getUserDisplayName(campaign.creator)
-                  : 'Unknown'}
+                {isCreator 
+                  ? 'You'
+                  : campaign.creator && typeof campaign.creator === 'string' 
+                    ? getUserDisplayName(campaign.creator, userAddress)
+                    : 'Unknown'}
               </span>
           </div>
           <div className={`text-sm ${isNotStarted ? 'text-yellow-700 font-bold' : isActive ? 'text-green-700 font-bold' : 'text-black font-bold'}`}>

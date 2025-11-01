@@ -208,9 +208,11 @@ export default function CampaignDetailModal({
                   <div className="flex justify-between">
                                          <span className="text-black font-bold">Creator:</span>
                      <span className="font-bold text-black">
-                       {campaign.creator && typeof campaign.creator === 'string' 
-                         ? getUserDisplayName(campaign.creator)
-                         : 'Unknown'}
+                       {userAddress && typeof userAddress === 'string' && campaign.creator && typeof campaign.creator === 'string' && userAddress.toLowerCase() === campaign.creator.toLowerCase()
+                         ? 'You'
+                         : campaign.creator && typeof campaign.creator === 'string' 
+                           ? getUserDisplayName(campaign.creator, userAddress)
+                           : 'Unknown'}
                      </span>
                   </div>
                   <div className="flex justify-between">

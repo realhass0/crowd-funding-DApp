@@ -578,15 +578,15 @@ export default function Home() {
                   {/* Create Campaign */}
                   {userAccount && (
                     <div className="pt-4 border-t border-gray-200">
-                      <button
-                        onClick={() => setIsCreateModalOpen(true)}
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
                         className="w-full text-left border-transparent text-black hover:bg-gray-50 hover:border-gray-300 hover:text-gray-900 group flex items-center px-2 py-2 text-sm font-medium border-r-4"
-                      >
-                        <svg className="mr-3 flex-shrink-0 h-6 w-6 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        Create Campaign
-                      </button>
+                >
+                  <svg className="mr-3 flex-shrink-0 h-6 w-6 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Create Campaign
+                </button>
                     </div>
                   )}
                   {/* Guest Mode Info */}
@@ -596,7 +596,12 @@ export default function Home() {
                         <p className="font-medium text-black mb-1">👤 Guest Mode</p>
                         <p className="text-black font-medium">Connect wallet to create campaigns and contribute</p>
                       </div>
-                      <WalletConnect onConnect={handleWalletConnect} onDisconnect={handleWalletDisconnect} />
+                      <WalletConnect 
+                        onConnect={handleWalletConnect} 
+                        onDisconnect={handleWalletDisconnect}
+                        externalAccount={userAccount}
+                        externalBalance={userBalance}
+                      />
                     </div>
                   )}
               </nav>
@@ -623,7 +628,7 @@ export default function Home() {
                     Continue as Guest
                   </button>
                   <div className="text-gray-500 font-medium">or</div>
-                  <WalletConnect onConnect={handleWalletConnect} onDisconnect={handleWalletDisconnect} />
+                <WalletConnect onConnect={handleWalletConnect} onDisconnect={handleWalletDisconnect} />
                 </div>
                 {campaigns.length > 0 && (
                   <div className="mt-8">
@@ -635,23 +640,23 @@ export default function Home() {
               <div className="space-y-6">
                 {/* User Info & Actions (Dashboard only) */}
                 {activeTab === 'dashboard' && userAccount && typeof userAccount === 'string' && (
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
                       <h2 className="text-lg font-medium text-black">Welcome back!</h2>
                       <p className="text-sm text-black">
-                          Account: {userAccount.slice(0, 6)}...{userAccount.slice(-4)} | 
-                          Balance: {parseFloat(userBalance).toFixed(4)} ETH
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                      >
-                        Create Campaign
-                      </button>
+                        Account: {userAccount.slice(0, 6)}...{userAccount.slice(-4)} | 
+                        Balance: {parseFloat(userBalance).toFixed(4)} ETH
+                      </p>
                     </div>
+                    <button
+                      onClick={() => setIsCreateModalOpen(true)}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Create Campaign
+                    </button>
                   </div>
+                </div>
                 )}
 
                 {/* Tab Content */}
@@ -784,8 +789,8 @@ export default function Home() {
                   ) : activeTab === 'my-contributions' ? (
                     /* My Contributions */
                   <div className="space-y-6">
-                      <div className="bg-white rounded-lg shadow">
-                        <div className="px-6 py-4 border-b border-gray-200">
+                    <div className="bg-white rounded-lg shadow">
+                      <div className="px-6 py-4 border-b border-gray-200">
                           <h3 className="text-lg font-medium text-black">My Contributions</h3>
                           {isGuestMode && !userAccount && (
                             <p className="text-sm text-black font-medium mt-1">Connect your wallet to view your contributions</p>
@@ -798,71 +803,71 @@ export default function Home() {
                               <span className="text-black">Loading contributions...</span>
                           </div>
                         ) : (
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                              <tr>
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
                               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Campaign</th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Goal</th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Pledged</th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">My Contribution</th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Status</th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
                                 {userContributions.map((contribution) => {
                                   const status = getContributorStatus(contribution, currentTime);
                                   return (
-                                <tr key={contribution.campaignId}>
+                              <tr key={contribution.campaignId}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">
-                                    #{contribution.campaignId}
-                                  </td>
+                                  #{contribution.campaignId}
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                                    {ethers.formatEther(contribution.campaign.goal)} ETH
-                                  </td>
+                                  {ethers.formatEther(contribution.campaign.goal)} ETH
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                                    {ethers.formatEther(contribution.campaign.pledged)} ETH
-                                  </td>
+                                  {ethers.formatEther(contribution.campaign.pledged)} ETH
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                                    {ethers.formatEther(contribution.amount)} ETH
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  {ethers.formatEther(contribution.amount)} ETH
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                                           status === 'done' ? 'bg-green-100 text-green-800' :
                                           status === 'refunded' ? 'bg-yellow-100 text-yellow-800' :
                                           status === 'success' ? 'bg-blue-100 text-blue-800' :
                                           status === 'failed' ? 'bg-red-100 text-red-800' :
                                           status === 'upcoming' ? 'bg-yellow-100 text-yellow-800' :
                                           'bg-indigo-100 text-indigo-800'
-                                        }`}>
+                                  }`}>
                                           {status === 'done' ? 'Funded' :
                                            status === 'refunded' ? 'Refunded' :
                                            status === 'success' ? 'Success' :
                                            status === 'failed' ? 'Failed' :
                                            status === 'upcoming' ? 'Not Started' :
                                      'Active'}
-                                    </span>
-                                  </td>
+                                  </span>
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                                    <button
-                                      onClick={() => handleCampaignSelect(contribution.campaign)}
-                                      className="text-indigo-600 hover:text-indigo-900"
-                                    >
-                                      View
-                                    </button>
-                                  </td>
-                                </tr>
+                                  <button
+                                    onClick={() => handleCampaignSelect(contribution.campaign)}
+                                    className="text-indigo-600 hover:text-indigo-900"
+                                  >
+                                    View
+                                  </button>
+                                </td>
+                              </tr>
                                   );
                                 })}
-                              {userContributions.length === 0 && (
-                                <tr>
-                                  <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
-                                    No contributions yet
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
+                            {userContributions.length === 0 && (
+                              <tr>
+                                <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                                  No contributions yet
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
                         )}
                       </div>
                     </div>
@@ -919,7 +924,7 @@ export default function Home() {
                                         status === 'failed' ? 'bg-red-100 text-red-800' :
                                         status === 'upcoming' ? 'bg-yellow-100 text-yellow-800' :
                                         'bg-indigo-100 text-indigo-800'
-                                      }`}>
+                                  }`}>
                                         {status === 'claimed' ? 'Claimed' :
                                          status === 'success' ? 'Success' :
                                          status === 'failed' ? 'Failed' :

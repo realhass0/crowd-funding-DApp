@@ -39,6 +39,44 @@ export const USER_MAPPING: UserInfo[] = [
   { id: 106, name: "Artisan Coffee Co", address: "0x9876543210987654321098765432109876543210" },
 ];
 
+// Random names pool for deterministic generation
+const RANDOM_NAMES = [
+  "Alex", "Jordan", "Taylor", "Morgan", "Casey", "Riley", "Avery", "Quinn",
+  "Cameron", "Dakota", "Skyler", "Blake", "Sage", "River", "Phoenix", "Rowan",
+  "Finley", "Hayden", "Emery", "Reese", "Devon", "Bryce", "Kai", "Ashton",
+  "Drew", "Ellis", "Gray", "Harley", "Jules", "Micah", "Nico", "Parker",
+  "Quinn", "Reese", "Sloane", "Tatum", "Winter", "Zane", "Ari", "Blair"
+];
+
+/**
+ * Generate a deterministic random name based on creator and viewer addresses
+ * This ensures the same viewer sees the same name for the same creator,
+ * but different viewers see different names for the same creator
+ */
+export function getRandomCreatorName(creatorAddress: string, viewerAddress: string | null | undefined): string {
+  if (!creatorAddress || !viewerAddress) {
+    // Fallback to simple hash-based selection
+    let hash = 0;
+    for (let i = 0; i < creatorAddress.length; i++) {
+      const char = creatorAddress.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return RANDOM_NAMES[Math.abs(hash) % RANDOM_NAMES.length];
+  }
+
+  // Combine creator and viewer addresses for deterministic generation
+  const combined = (creatorAddress.toLowerCase() + viewerAddress.toLowerCase()).split('');
+  let hash = 0;
+  for (let i = 0; i < combined.length; i++) {
+    const char = combined[i].charCodeAt(0);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  
+  return RANDOM_NAMES[Math.abs(hash) % RANDOM_NAMES.length];
+}
+
 /**
  * Get user info by wallet address
  * @param address - The wallet address to look up
@@ -48,18 +86,22 @@ export function getUserByAddress(address: string): UserInfo | null {
   if (!address) return null;
 
   return USER_MAPPING.find(user => 
-    user.address === address
+    user.address.toLowerCase() === address.toLowerCase()
   ) || null;
 }
 
 /**
  * Get user display name by wallet address
  * @param address - The wallet address to look up
- * @returns User display name or "Unknown User" if not found
+ * @param viewerAddress - Optional viewer address for random name generation
+ * @returns User display name or random name if not found
  */
-export function getUserDisplayName(address: string): string {
+export function getUserDisplayName(address: string, viewerAddress?: string | null): string {
   const user = getUserByAddress(address);
-  return user ? user.name : "Unknown";
+  if (user) return user.name;
+  
+  // Return random name if not in mapping
+  return getRandomCreatorName(address, viewerAddress);
 }
 
 /**

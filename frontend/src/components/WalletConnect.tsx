@@ -6,15 +6,48 @@ import { getBrowserProvider } from "@/lib/web3";
 interface WalletConnectProps {
   onConnect: (account: string, balance: string) => void;
   onDisconnect: () => void;
+  externalAccount?: string | null;
+  externalBalance?: string;
 }
 
-export default function WalletConnect({ onConnect, onDisconnect }: WalletConnectProps) {
+export default function WalletConnect({ onConnect, onDisconnect, externalAccount, externalBalance }: WalletConnectProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [account, setAccount] = useState<string | null>(null);
   const [balance, setBalance] = useState<string>("0");
 
+  // Sync with external account/balance if provided (this ensures header syncs when sidebar connects)
+  useEffect(() => {
+    if (externalAccount !== undefined) {
+      setAccount(externalAccount);
+      if (externalAccount && externalBalance !== undefined) {
+        setBalance(externalBalance);
+      } else if (!externalAccount) {
+        setBalance("0");
+      }
+    }
+  }, [externalAccount, externalBalance]);
+
   useEffect(() => {
     checkConnection();
+    // Set up global listener for account changes
+    if (typeof window !== "undefined") {
+      const ethereum = (window as { ethereum?: { on?: (event: string, callback: (accounts: string[]) => void) => void; removeListener?: (event: string, callback: (accounts: string[]) => void) => void } }).ethereum;
+      if (ethereum?.on) {
+        const handleAccountsChanged = (accounts: string[]) => {
+          if (accounts.length > 0) {
+            handleAccountChange(accounts[0]);
+          } else {
+            handleAccountChange(null);
+          }
+        };
+        ethereum.on("accountsChanged", handleAccountsChanged);
+        return () => {
+          if (ethereum.removeListener) {
+            ethereum.removeListener("accountsChanged", handleAccountsChanged);
+          }
+        };
+      }
+    }
   }, []);
 
   async function checkConnection() {
@@ -114,14 +147,18 @@ export default function WalletConnect({ onConnect, onDisconnect }: WalletConnect
     }
   }
 
-  if (account) {
+  // Use external account/balance if provided, otherwise use local state
+  const displayAccount = externalAccount !== undefined ? externalAccount : account;
+  const displayBalance = externalBalance !== undefined ? externalBalance : balance;
+
+  if (displayAccount) {
     return (
       <div className="flex items-center gap-3">
         <div className="text-right">
           <div className="text-black font-medium">
-            {account && typeof account === 'string' ? getUserDisplayName(account) : 'Unknown User'}
+            Balance
           </div>
-          <div className="text-xs text-gray-500">{parseFloat(balance).toFixed(4)} ETH</div>
+          <div className="text-xs text-gray-500">{parseFloat(displayBalance).toFixed(4)} ETH</div>
         </div>
         <button
           onClick={disconnect}
