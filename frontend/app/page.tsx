@@ -9,6 +9,7 @@ import CampaignDetailModal from "@/components/CampaignDetailModal";
 import AddRewardModal from "@/components/AddRewardModal";
 import { Toaster, toast } from "react-hot-toast";
 import type { Campaign, Reward, UserContribution } from "@/types";
+import { getSampleCampaigns } from "@/constants/sampleCampaigns";
 
 // Augment the contribution with a refunded flag for UI
 type UIUserContribution = UserContribution & { refunded?: boolean };
@@ -34,13 +35,14 @@ export default function Home() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'campaigns' | 'my-contributions' | 'my-campaigns' | 'my-rewards'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'campaigns' | 'my-contributions' | 'my-campaigns' | 'my-rewards'>('campaigns');
   const [userContributions, setUserContributions] = useState<UIUserContribution[]>([]);
   const [userCreatedCampaigns, setUserCreatedCampaigns] = useState<Campaign[]>([]);
   const [userRewards, setUserRewards] = useState<UserRewardEntry[]>([]);
   const [totalContributed, setTotalContributed] = useState<bigint>(0n);
   const [isLoadingUserData, setIsLoadingUserData] = useState(false);
   const [networkInfo, setNetworkInfo] = useState<{chainId: string, name: string} | null>(null);
+  const [isGuestMode, setIsGuestMode] = useState<boolean>(false);
 
   // Keep last known non-zero pledged to show after creator claims (if contract zeroes it)
   const [lastKnownPledged, setLastKnownPledged] = useState<Record<number, bigint>>({});
@@ -54,12 +56,15 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // Load campaigns on mount and when account or tab changes
+  // Load campaigns on mount and when account, tab, or guest mode changes
+  // Note: currentTime is NOT in dependencies to prevent infinite refresh
+  // Campaigns don't need to reload every second - time updates happen in render
   useEffect(() => {
-    if (userAccount) {
+    if (currentTime > 0) {
       loadCampaigns();
     }
-  }, [userAccount, activeTab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userAccount, activeTab, isGuestMode]);
 
   // Load user data after campaigns are loaded
   useEffect(() => {
@@ -71,61 +76,73 @@ export default function Home() {
   async function loadCampaigns() {
     setIsLoading(true);
     try {
-      const contract = await getCrowdfundReadContract();
-      if (!contract) return;
-
-      const campaignCount = await contract.campaignCount();
-      const loadedCampaigns: Campaign[] = [];
+      // Always load sample campaigns first (for guest mode and demonstration)
+      const sampleCampaigns = getSampleCampaigns(currentTime);
+      const loadedCampaigns: Campaign[] = [...sampleCampaigns];
       const newLastKnown = { ...lastKnownPledged };
 
-      for (let i = 1; i <= Number(campaignCount); i++) {
-        try {
-          const campaign = await contract.campaigns(i);
-          // Track last known non-zero pledged so we can display it even after claim
-          if (campaign.pledged && campaign.pledged > 0n) {
-            newLastKnown[i] = campaign.pledged;
-          }
-          const effectivePledged =
-            (campaign.pledged === 0n && campaign.claimed && newLastKnown[i] && newLastKnown[i] > 0n)
-              ? newLastKnown[i]
-              : campaign.pledged;
+      // Try to load real campaigns from contract (if available)
+      try {
+        const contract = await getCrowdfundReadContract();
+        if (contract) {
+          const campaignCount = await contract.campaignCount();
 
-          const campaignData = {
-            id: i,
-            creator: campaign.creator,
-            goal: campaign.goal,
-            pledged: effectivePledged,
-            startAt: campaign.startAt,
-            endAt: campaign.endAt,
-            claimed: campaign.claimed,
-            metadataURI: campaign.metadataURI,
-          };
+          for (let i = 1; i <= Number(campaignCount); i++) {
+            try {
+              const campaign = await contract.campaigns(i);
+              // Track last known non-zero pledged so we can display it even after claim
+              if (campaign.pledged && campaign.pledged > 0n) {
+                newLastKnown[i] = campaign.pledged;
+              }
+              const effectivePledged =
+                (campaign.pledged === 0n && campaign.claimed && newLastKnown[i] && newLastKnown[i] > 0n)
+                  ? newLastKnown[i]
+                  : campaign.pledged;
 
-          // Filter campaigns based on context:
-          // 1. For "Browse Campaigns" - show all campaigns (upcoming, active, and ended)
-          // 2. For "My Campaigns" - show all campaigns created by the current user
-          // 3. For other contexts - show all campaigns
-          if (activeTab === 'campaigns') {
-            // Show all campaigns in browse section (upcoming, active, ended)
-            loadedCampaigns.push(campaignData);
-          } else if (activeTab === 'my-campaigns') {
-            // Only show campaigns created by current user
-            if (userAccount && campaignData.creator.toLowerCase() === userAccount.toLowerCase()) {
-              loadedCampaigns.push(campaignData);
+              const campaignData = {
+                id: i,
+                creator: campaign.creator,
+                goal: campaign.goal,
+                pledged: effectivePledged,
+                startAt: campaign.startAt,
+                endAt: campaign.endAt,
+                claimed: campaign.claimed,
+                metadataURI: campaign.metadataURI,
+              };
+
+              // Filter campaigns based on context:
+              // 1. For "Browse Campaigns" - show all campaigns (upcoming, active, and ended)
+              // 2. For "My Campaigns" - show all campaigns created by the current user
+              // 3. For other contexts - show all campaigns
+              if (activeTab === 'campaigns') {
+                // Show all campaigns in browse section (upcoming, active, ended)
+                loadedCampaigns.push(campaignData);
+              } else if (activeTab === 'my-campaigns') {
+                // Only show campaigns created by current user
+                if (userAccount && campaignData.creator.toLowerCase() === userAccount.toLowerCase()) {
+                  loadedCampaigns.push(campaignData);
+                }
+              } else {
+                // For dashboard and other contexts, show all campaigns
+                loadedCampaigns.push(campaignData);
+              }
+            } catch (error) {
+              console.error(`Failed to load campaign ${i}:`, error);
             }
-          } else {
-            // For dashboard and other contexts, show all campaigns
-            loadedCampaigns.push(campaignData);
           }
-        } catch (error) {
-          console.error(`Failed to load campaign ${i}:`, error);
         }
+      } catch (error) {
+        // If contract is not available, continue with sample campaigns only
+        console.log("Contract not available, showing sample campaigns only");
       }
 
       setLastKnownPledged(newLastKnown);
       setCampaigns(loadedCampaigns);
     } catch (error) {
       console.error("Failed to load campaigns:", error);
+      // Fallback to sample campaigns only
+      const sampleCampaigns = getSampleCampaigns(currentTime);
+      setCampaigns(sampleCampaigns);
     } finally {
       setIsLoading(false);
     }
@@ -284,12 +301,15 @@ export default function Home() {
               } else if (uc.refunded) {
                 // User refunded their contribution, so they missed the reward
                 rewardStatus = 'missed';
-              } else if (uc.campaign.claimed) {
-                // Campaign succeeded and creator withdrew, reward is claimable
-                rewardStatus = 'eligible';
+              } else if (uc.campaign.claimed && uc.campaign.pledged >= uc.campaign.goal) {
+                // Campaign succeeded and creator withdrew funds - reward is automatically claimed
+                rewardStatus = 'claimed';
               } else if (Number(uc.campaign.endAt) <= currentTime && uc.campaign.pledged < uc.campaign.goal) {
-                // Campaign failed, user should have refunded
+                // Campaign failed (goal not met after end) - user missed the reward
                 rewardStatus = 'missed';
+              } else {
+                // Campaign is still active or succeeded but not yet withdrawn - reward is eligible
+                rewardStatus = 'eligible';
               }
               
               rewards.push({
@@ -437,13 +457,21 @@ export default function Home() {
   function handleWalletDisconnect() {
     setUserAccount(null);
     setUserBalance("0");
-    setCampaigns([]);
     setUserContributions([]);
     setUserCreatedCampaigns([]);
     setUserRewards([]);
     setTotalContributed(0n);
     setSidebarOpen(false);
     setLastKnownPledged({});
+    setIsGuestMode(false);
+    // Keep campaigns loaded (sample + real campaigns)
+    loadCampaigns();
+  }
+
+  function handleGuestMode() {
+    setIsGuestMode(true);
+    setActiveTab('campaigns');
+    loadCampaigns();
   }
 
   return (
@@ -453,7 +481,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              {userAccount && (
+              {(userAccount || isGuestMode) && (
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
@@ -467,6 +495,9 @@ export default function Home() {
                 <h1 className="text-xl font-semibold text-black">Crowdfund dApp</h1>
                 <p className="text-sm text-blue-600 font-medium">Donate, Bring Ideas and Get Funded</p>
               </div>
+              {isGuestMode && !userAccount && (
+                <span className="ml-4 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">Guest Mode</span>
+              )}
             </div>
             <WalletConnect onConnect={handleWalletConnect} onDisconnect={handleWalletDisconnect} />
           </div>
@@ -475,7 +506,7 @@ export default function Home() {
 
     <div className="flex min-h-[calc(100vh-4rem)]">
         {/* Sidebar */}
-        {userAccount && (
+        {(userAccount || isGuestMode) && (
           <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:transition-none lg:sticky lg:top-16 lg:inset-auto lg:h-[calc(100vh-4rem)]`}>
           <div className="h-full flex flex-col">
             <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
@@ -571,17 +602,29 @@ export default function Home() {
                 </button>
 
                   {/* Create Campaign */}
-                  <div className="pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="w-full text-left border-transparent text-black hover:bg-gray-50 hover:border-gray-300 hover:text-gray-900 group flex items-center px-2 py-2 text-sm font-medium border-r-4"
-                >
-                  <svg className="mr-3 flex-shrink-0 h-6 w-6 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Create Campaign
-                </button>
-                  </div>
+                  {userAccount && (
+                    <div className="pt-4 border-t border-gray-200">
+                      <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="w-full text-left border-transparent text-black hover:bg-gray-50 hover:border-gray-300 hover:text-gray-900 group flex items-center px-2 py-2 text-sm font-medium border-r-4"
+                      >
+                        <svg className="mr-3 flex-shrink-0 h-6 w-6 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Create Campaign
+                      </button>
+                    </div>
+                  )}
+                  {/* Guest Mode Info */}
+                  {isGuestMode && !userAccount && (
+                    <div className="pt-4 border-t border-gray-200 px-2 py-3">
+                      <div className="text-xs text-gray-600 mb-2 bg-blue-50 p-2 rounded">
+                        <p className="font-medium text-black mb-1">👤 Guest Mode</p>
+                        <p className="text-gray-600">Connect wallet to create campaigns and contribute</p>
+                      </div>
+                      <WalletConnect onConnect={handleWalletConnect} onDisconnect={handleWalletDisconnect} />
+                    </div>
+                  )}
               </nav>
             </div>
           </div>
@@ -592,11 +635,27 @@ export default function Home() {
         <div className="flex-1">
           <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             {/* Welcome Section */}
-            {!userAccount ? (
-              <div className="text-center py-12">
-                <h2 className="text-3xl font-bold text-black-900 mb-4">Welcome to Crowdfund dApp</h2>
-                <p className="text-lg text-black mb-5">Connect your MetaMask wallet to start creating and funding campaigns</p>
-                <WalletConnect onConnect={handleWalletConnect} onDisconnect={handleWalletDisconnect} />
+            {!userAccount && !isGuestMode ? (
+              <div className="text-center py-12 px-4">
+                <h2 className="text-3xl font-bold text-black mb-4">Welcome to Crowdfund dApp</h2>
+                <p className="text-lg text-black mb-8 max-w-2xl mx-auto">
+                  Explore campaigns, contribute to projects, and bring ideas to life. Connect your wallet to create and manage campaigns, or browse as a guest.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <button
+                    onClick={handleGuestMode}
+                    className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                  >
+                    Continue as Guest
+                  </button>
+                  <div className="text-gray-500 font-medium">or</div>
+                  <WalletConnect onConnect={handleWalletConnect} onDisconnect={handleWalletDisconnect} />
+                </div>
+                {campaigns.length > 0 && (
+                  <div className="mt-8">
+                    <p className="text-sm text-gray-600 mb-4">Viewing {campaigns.length} sample campaigns</p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-6">
@@ -622,7 +681,7 @@ export default function Home() {
                 )}
 
                 {/* Tab Content */}
-                {userAccount ? (
+                {(userAccount || isGuestMode) ? (
                   activeTab === 'dashboard' ? (
                     /* Dashboard */
                     <div className="space-y-6">
@@ -630,9 +689,28 @@ export default function Home() {
                       <div className="bg-white rounded-lg shadow p-6">
                         <div className="flex items-center justify-between mb-4">
                           <h2 className="text-xl font-semibold text-black">
-                            User Dashboard <span className="text-gray-500">(Wallet: {userAccount && typeof userAccount === 'string' ? `${userAccount.slice(0, 6)}...${userAccount.slice(-4)}` : 'Unknown'})</span>
+                            {isGuestMode && !userAccount ? (
+                              <>Guest Dashboard <span className="text-gray-500">(Connect wallet to track your contributions)</span></>
+                            ) : (
+                              <>User Dashboard <span className="text-gray-500">(Wallet: {userAccount && typeof userAccount === 'string' ? `${userAccount.slice(0, 6)}...${userAccount.slice(-4)}` : 'Unknown'})</span></>
+                            )}
                           </h2>
                         </div>
+                        {isGuestMode && !userAccount && (
+                          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-black">
+                              <span className="font-semibold">👤 You're browsing as a guest.</span> Connect your wallet to create campaigns, contribute, and track your activity.
+                            </p>
+                            <button
+                              onClick={() => {
+                                setIsGuestMode(false);
+                              }}
+                              className="mt-2 text-indigo-600 hover:text-indigo-800 text-sm font-medium underline"
+                            >
+                              Connect Wallet →
+                            </button>
+                          </div>
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                           <div className="bg-blue-50 rounded-lg p-4">
                             <div className="text-sm text-blue-600 font-medium">Total Contributed</div>
@@ -735,6 +813,9 @@ export default function Home() {
                       <div className="bg-white rounded-lg shadow">
                         <div className="px-6 py-4 border-b border-gray-200">
                           <h3 className="text-lg font-medium text-black">My Contributions</h3>
+                          {isGuestMode && !userAccount && (
+                            <p className="text-sm text-gray-600 mt-1">Connect your wallet to view your contributions</p>
+                          )}
                       </div>
                       <div className="overflow-x-auto">
                         {isLoadingUserData ? (
@@ -818,14 +899,19 @@ export default function Home() {
                     <div className="bg-white rounded-lg shadow">
                         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                         <h3 className="text-lg font-medium text-black">
-                          My Created Campaigns (Total: {userCreatedCampaigns.length})
+                          My Created Campaigns {userAccount ? `(Total: ${userCreatedCampaigns.length})` : ''}
                         </h3>
+                        {userAccount && (
                           <button
                             onClick={() => setIsCreateModalOpen(true)}
                             className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
                           >
                             Create New Campaign
                           </button>
+                        )}
+                        {isGuestMode && !userAccount && (
+                          <p className="text-sm text-gray-600">Connect your wallet to create and manage campaigns</p>
+                        )}
                       </div>
                       <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
@@ -909,6 +995,9 @@ export default function Home() {
                       <div className="bg-white rounded-lg shadow">
                         <div className="px-6 py-4 border-b border-gray-200">
                           <h3 className="text-lg font-medium text-black">My Rewards</h3>
+                          {isGuestMode && !userAccount && (
+                            <p className="text-sm text-gray-600 mt-1">Connect your wallet to view your rewards</p>
+                          )}
                         </div>
                         <div className="p-4">
                           {isLoadingUserData ? (
@@ -943,13 +1032,12 @@ export default function Home() {
                                        ur.status === 'missed' ? 'Missed' :
                                        'Eligible'}
                                     </span>
-                                    {ur.status === 'eligible' && ur.campaign?.claimed && (
-                                      <button
-                                        onClick={() => handleClaimReward(ur.campaignId, ur.reward)}
-                                        className="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
-                                      >
-                                        Claim Reward
-                                      </button>
+                                    {ur.status === 'eligible' && (
+                                      <span className="text-xs text-gray-500 italic">
+                                        {Number(ur.campaign?.endAt || 0) <= currentTime && ur.campaign?.pledged >= ur.campaign?.goal
+                                          ? 'Waiting for creator to withdraw'
+                                          : 'Will auto-claim when campaign succeeds'}
+                                      </span>
                                     )}
                                   </div>
                                 </div>
@@ -996,6 +1084,7 @@ export default function Home() {
         }}
         currentTime={currentTime}
         userAddress={userAccount && typeof userAccount === 'string' ? userAccount : undefined}
+        isGuestMode={isGuestMode && !userAccount}
         onRefresh={() => {
           loadCampaigns();
           loadUserData();
@@ -1003,7 +1092,7 @@ export default function Home() {
       />
 
       {/* Mobile sidebar overlay */}
-  {userAccount && sidebarOpen && (
+      {(userAccount || isGuestMode) && sidebarOpen && (
         <div 
           className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-50"
           onClick={() => setSidebarOpen(false)}

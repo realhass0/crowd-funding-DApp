@@ -11,6 +11,7 @@ interface CampaignDetailModalProps {
   onClose: () => void;
   currentTime: number;
   userAddress?: string;
+  isGuestMode?: boolean;
   onRefresh: () => void;
 }
 
@@ -20,6 +21,7 @@ export default function CampaignDetailModal({
   onClose, 
   currentTime, 
   userAddress,
+  isGuestMode = false,
   onRefresh 
 }: CampaignDetailModalProps) {
   const [rewards, setRewards] = useState<Reward[]>([]);
@@ -314,59 +316,67 @@ export default function CampaignDetailModal({
               {/* Contribution Form */}
               {isActive && (
                 <div className="bg-gray-50 rounded-lg p-4">
-                                     <h3 className="text-lg font-semibold mb-3 text-black">Contribute</h3>
-                  <div className="space-y-3">
-                    {isGoalMet && (
-                      <p className="text-xs text-green-700">
-                        Goal met! You can still contribute until the end time.
+                  <h3 className="text-lg font-semibold mb-3 text-black">Contribute</h3>
+                  {isGuestMode ? (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-black mb-3">
+                        <span className="font-semibold">👤 You're viewing in guest mode.</span> Connect your wallet to contribute to this campaign.
                       </p>
-                    )}
-                    <div>
-                                             <label className="block text-sm font-medium text-black mb-1 font-bold">
-                         Amount (ETH)
-                       </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        value={contributionAmount}
-                        onChange={(e) => setContributionAmount(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black bg-white"
-                        placeholder="0.1"
-                      />
                     </div>
-
-                    {rewards.length > 0 && (
+                  ) : (
+                    <div className="space-y-3">
+                      {isGoalMet && (
+                        <p className="text-xs text-green-700">
+                          Goal met! You can still contribute until the end time.
+                        </p>
+                      )}
                       <div>
-                                                 <label className="block text-sm font-medium text-black mb-1 font-bold">
-                           Select Reward (Optional)
-                         </label>
-                        <select
-                          value={selectedReward}
-                          onChange={(e) => setSelectedReward(parseInt(e.target.value))}
+                        <label className="block text-sm font-medium text-black mb-1 font-bold">
+                          Amount (ETH)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={contributionAmount}
+                          onChange={(e) => setContributionAmount(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black bg-white"
-                        >
-                          <option value={-1}>No reward</option>
-                          {rewards.map((reward, index) => {
-                            const soldOut = reward.quantityAvailable > 0n && reward.claimedCount >= reward.quantityAvailable;
-                            return (
-                              <option key={index} value={index} disabled={soldOut}>
-                                {reward.title} - Min: {ethers.formatEther(reward.minimumContribution)} ETH {soldOut ? "(Sold out)" : ""}
-                            </option>
-                            );
-                          })}
-                        </select>
+                          placeholder="0.1"
+                        />
                       </div>
-                    )}
 
-                    <button
-                      onClick={handlePledge}
-                      disabled={isSubmitting || !contributionAmount}
-                      className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-                    >
-                      {isSubmitting ? "Processing..." : "Contribute"}
-                    </button>
-                  </div>
+                      {rewards.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-black mb-1 font-bold">
+                            Select Reward (Optional)
+                          </label>
+                          <select
+                            value={selectedReward}
+                            onChange={(e) => setSelectedReward(parseInt(e.target.value))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black bg-white"
+                          >
+                            <option value={-1}>No reward</option>
+                            {rewards.map((reward, index) => {
+                              const soldOut = reward.quantityAvailable > 0n && reward.claimedCount >= reward.quantityAvailable;
+                              return (
+                                <option key={index} value={index} disabled={soldOut}>
+                                  {reward.title} - Min: {ethers.formatEther(reward.minimumContribution)} ETH {soldOut ? "(Sold out)" : ""}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={handlePledge}
+                        disabled={isSubmitting || !contributionAmount}
+                        className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                      >
+                        {isSubmitting ? "Processing..." : "Contribute"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
