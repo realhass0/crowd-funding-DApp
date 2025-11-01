@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
-import { getCrowdfundContract, getCrowdfundAddress, getCrowdfundReadContract } from "@/lib/web3";
+import { getCrowdfundContract, getCrowdfundReadContract } from "@/lib/web3";
 import WalletConnect from "@/components/WalletConnect";
 import CampaignCard from "@/components/CampaignCard";
 import CreateCampaignModal from "@/components/CreateCampaignModal";
@@ -41,11 +41,7 @@ export default function Home() {
   const [userRewards, setUserRewards] = useState<UserRewardEntry[]>([]);
   const [totalContributed, setTotalContributed] = useState<bigint>(0n);
   const [isLoadingUserData, setIsLoadingUserData] = useState(false);
-  const [networkInfo, setNetworkInfo] = useState<{chainId: string, name: string} | null>(null);
   const [isGuestMode, setIsGuestMode] = useState<boolean>(false);
-  
-  // Store initial time when component mounts to keep sample campaign timestamps fixed
-  const [initialTime] = useState<number>(() => Math.floor(Date.now() / 1000));
   
   // Store sample campaigns separately so they don't get regenerated on every load
   const [sampleCampaigns] = useState<Campaign[]>(() => getSampleCampaigns(Math.floor(Date.now() / 1000)));
@@ -71,13 +67,6 @@ export default function Home() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userAccount, activeTab, isGuestMode]);
-
-  // Load user data after campaigns are loaded
-  useEffect(() => {
-    if (userAccount) {
-      loadUserData();
-    }
-  }, [userAccount, activeTab]);
 
   async function loadCampaigns() {
     setIsLoading(true);
@@ -144,8 +133,8 @@ export default function Home() {
 
       setLastKnownPledged(newLastKnown);
       setCampaigns(loadedCampaigns);
-    } catch (error) {
-      console.error("Failed to load campaigns:", error);
+    } catch {
+      console.error("Failed to load campaigns");
       // Fallback to sample campaigns only (use stored ones with fixed timestamps)
       setCampaigns(sampleCampaigns);
     } finally {
@@ -154,7 +143,8 @@ export default function Home() {
   }
 
   // Helper: best-effort check if a user has refunded for a given campaign
-  async function hasUserRefunded(contract: any, campaignId: number, user: string): Promise<boolean> {
+  async function hasUserRefunded(contract: ethers.Contract | null, campaignId: number, user: string): Promise<boolean> {
+    if (!contract) return false;
     try {
       if (typeof contract.hasRefunded === 'function') {
         return await contract.hasRefunded(campaignId, user);
@@ -174,7 +164,7 @@ export default function Home() {
   }
 
   // Load all campaigns for user data processing (not filtered by tab)
-  async function loadAllCampaigns(): Promise<Campaign[]> {
+  const loadAllCampaigns = useCallback(async (): Promise<Campaign[]> => {
     try {
       const contract = await getCrowdfundReadContract();
       if (!contract) return [];
@@ -200,17 +190,16 @@ export default function Home() {
             claimed: campaign.claimed,
             metadataURI: campaign.metadataURI,
           });
-        } catch (error) {
-          console.error(`Failed to load campaign ${i}:`, error);
+        } catch {
+          // Skip failed campaigns
         }
       }
 
       return allCampaigns;
-    } catch (error) {
-      console.error("Failed to load all campaigns:", error);
+    } catch {
       return [];
     }
-  }
+  }, [lastKnownPledged]);
 
   const loadUserData = useCallback(async () => {
     if (!userAccount || typeof userAccount !== 'string') return;
@@ -218,7 +207,7 @@ export default function Home() {
     setIsLoadingUserData(true);
     
     try {
-      const contract: any = await getCrowdfundReadContract();
+      const contract = await getCrowdfundReadContract();
       if (!contract) return;
 
       // Load all campaigns for user data processing
@@ -284,8 +273,9 @@ export default function Home() {
         if (Array.isArray(campaignRewards)) {
           for (const rw of campaignRewards) {
             // Check if user meets the minimum contribution threshold
-            const threshold = (rw as any).minContribution ?? (rw as any).minimumContribution ?? 0n;
-            const minContrib = typeof threshold === 'bigint' ? threshold : BigInt(threshold.toString?.() ?? threshold);
+            const reward = rw as Reward;
+            const threshold = reward.minimumContribution ?? 0n;
+            const minContrib = typeof threshold === 'bigint' ? threshold : BigInt(String(threshold));
             
             if (uc.amount >= minContrib) {
               // Determine reward status based on campaign and user state
@@ -295,9 +285,9 @@ export default function Home() {
               // Check if user has already claimed this reward
               try {
                 if (typeof contract.isRewardClaimed === 'function') {
-                  claimed = await contract.isRewardClaimed(cid, (rw as any).id ?? 0, userAccount);
+                  claimed = await contract.isRewardClaimed(cid, 0, userAccount);
                 } else if (typeof contract.rewardClaimed === 'function') {
-                  claimed = await contract.rewardClaimed(cid, (rw as any).id ?? 0, userAccount);
+                  claimed = await contract.rewardClaimed(cid, 0, userAccount);
                 }
               } catch {}
               
@@ -331,12 +321,19 @@ export default function Home() {
       }
 
       setUserRewards(rewards);
-    } catch (error) {
-      console.error("Failed to load user data:", error);
+    } catch {
+      console.error("Failed to load user data");
     } finally {
       setIsLoadingUserData(false);
     }
-  }, [userAccount, campaigns, currentTime]);
+  }, [userAccount, campaigns, currentTime, loadAllCampaigns]);
+
+  // Load user data after campaigns are loaded
+  useEffect(() => {
+    if (userAccount) {
+      loadUserData();
+    }
+  }, [userAccount, activeTab, loadUserData]);
 
   function getCampaignStatus(campaign: Campaign, time: number): 'upcoming' | 'active' | 'success' | 'failed' {
     if (time < Number(campaign.startAt)) return 'upcoming';
@@ -371,21 +368,6 @@ export default function Home() {
     return { days, hours, minutes, seconds, total };
   }
 
-  function formatCountdown(targetTime: number): string {
-    const { days, hours, minutes, seconds, total } = getTimeRemaining(targetTime);
-    
-    if (total <= 0) return "Ended";
-    
-    if (days > 0) {
-      return `${days}d ${hours}h ${minutes}m`;
-    } else if (hours > 0) {
-      return `${hours}h ${minutes}m ${seconds}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    } else {
-      return `${seconds}s`;
-    }
-  }
 
   async function handleCreateCampaign(goal: bigint, startAt: number, endAt: number, metadataURI: string) {
     try {
@@ -396,8 +378,9 @@ export default function Home() {
       // Preflight: estimate gas to catch reverts early with clearer reason
       try {
         await contract.createCampaign.estimateGas(goal, startAt, endAt, metadataURI);
-      } catch (err: any) {
-        const msg = err?.shortMessage || err?.info?.error?.message || err?.message || 'Transaction would fail';
+      } catch (err: unknown) {
+        const error = err as { shortMessage?: string; info?: { error?: { message?: string } }; message?: string };
+        const msg = error?.shortMessage || error?.info?.error?.message || error?.message || 'Transaction would fail';
         throw new Error(msg);
       }
 
@@ -411,8 +394,9 @@ export default function Home() {
       setActiveTab('my-campaigns');
       
       toast.success("Campaign created successfully!");
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to create campaign");
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(err?.message || "Failed to create campaign");
     }
   }
 
@@ -426,27 +410,12 @@ export default function Home() {
 
       toast.success("Reward added successfully!");
       setIsAddRewardModalOpen(false);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to add reward");
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(err.message || "Failed to add reward");
     }
   }
 
-  // Note: Rewards are automatically claimed when pledging with a reward index
-  // There's no separate claimReward function in the contract
-  async function handleClaimReward(campaignId: number, reward: Reward) {
-    // Update the reward status to 'claimed' in the userRewards array
-    // Match by campaignId and reward properties since rewards don't have unique IDs
-    setUserRewards(prevRewards => 
-      prevRewards.map(ur => 
-        ur.campaignId === campaignId && 
-        ur.reward.title === reward.title &&
-        ur.reward.minimumContribution === reward.minimumContribution
-          ? { ...ur, status: 'claimed' as const }
-          : ur
-      )
-    );
-    toast.success("Reward claimed!");
-  }
 
   function handleCampaignSelect(campaign: Campaign) {
     setSelectedCampaign(campaign);
@@ -704,7 +673,7 @@ export default function Home() {
                         {isGuestMode && !userAccount && (
                           <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                             <p className="text-sm text-black">
-                              <span className="font-semibold">👤 You're browsing as a guest.</span> Connect your wallet to create campaigns, contribute, and track your activity.
+                              <span className="font-semibold">👤 You&apos;re browsing as a guest.</span> Connect your wallet to create campaigns, contribute, and track your activity.
                             </p>
                             <button
                               onClick={() => {
@@ -1099,12 +1068,15 @@ export default function Home() {
           setIsGuestMode(false);
           // The WalletConnect component in the header will handle the actual connection
           // We can also manually trigger it if needed
-          if (typeof window !== 'undefined' && (window as any).ethereum) {
-            (window as any).ethereum.request({ method: 'eth_requestAccounts' }).then(() => {
-              // Connection will be handled by WalletConnect component via event listeners
-            }).catch((err: any) => {
-              console.error("Failed to connect:", err);
-            });
+          if (typeof window !== 'undefined' && (window as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum) {
+            const ethereum = (window as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum;
+            if (ethereum) {
+              ethereum.request({ method: 'eth_requestAccounts' }).then(() => {
+                // Connection will be handled by WalletConnect component via event listeners
+              }).catch((err: unknown) => {
+                console.error("Failed to connect:", err);
+              });
+            }
           }
         }}
       />

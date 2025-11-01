@@ -39,8 +39,8 @@ export default function WalletConnect({ onConnect, onDisconnect }: WalletConnect
       addr = next[0] ?? null;
     } else if (typeof next === "string") {
       addr = next;
-    } else if (next && typeof next === "object" && (next as any).address) {
-      addr = (next as any).address as string;
+    } else if (next && typeof next === "object" && "address" in next) {
+      addr = (next as { address: string }).address;
     }
 
     if (!addr) {
@@ -82,14 +82,18 @@ export default function WalletConnect({ onConnect, onDisconnect }: WalletConnect
       }
 
       // Listen for account changes via EIP-1193
-      if (typeof window !== "undefined" && (window as any).ethereum?.on) {
-        (window as any).ethereum.on("accountsChanged", (accounts: string[]) => {
-          handleAccountChange(accounts);
-        });
+      if (typeof window !== "undefined") {
+        const ethereum = (window as { ethereum?: { on?: (event: string, callback: (accounts: string[]) => void) => void } }).ethereum;
+        if (ethereum?.on) {
+          ethereum.on("accountsChanged", (accounts: string[]) => {
+            handleAccountChange(accounts);
+          });
+        }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       console.error("Connection failed:", error);
-      alert(error.message || "Failed to connect");
+      alert(err.message || "Failed to connect");
     } finally {
       setIsConnecting(false);
     }
@@ -101,8 +105,8 @@ export default function WalletConnect({ onConnect, onDisconnect }: WalletConnect
       if (provider?.send) {
         await provider.send("wallet_revokePermissions", [{ eth_accounts: {} }]);
       }
-    } catch (error: any) {
-      console.error("Failed to disconnect:", error);
+    } catch {
+      // Ignore disconnect errors
     } finally {
     setAccount(null);
     setBalance("0");

@@ -34,32 +34,32 @@ export default function CampaignDetailModal({
 
   useEffect(() => {
     if (campaign && isOpen) {
+      async function loadRewards() {
+        if (!campaign) return;
+        try {
+          const contract = await getCrowdfundReadContract();
+          if (contract) {
+            const campaignRewards = await contract.getRewards(campaign.id);
+            setRewards(campaignRewards);
+          }
+        } catch {}
+      }
+
+      async function loadUserContribution() {
+        if (!campaign || !userAddress) return;
+        try {
+          const contract = await getCrowdfundReadContract();
+          if (contract) {
+            const contribution = await contract.getUserContribution(campaign.id, userAddress);
+            setUserContribution(contribution);
+          }
+        } catch {}
+      }
+
       loadRewards();
       loadUserContribution();
     }
-  }, [campaign, isOpen, loadRewards, loadUserContribution]);
-
-  async function loadRewards() {
-    if (!campaign) return;
-    try {
-  const contract = await getCrowdfundReadContract();
-      if (contract) {
-        const campaignRewards = await contract.getRewards(campaign.id);
-        setRewards(campaignRewards);
-      }
-  } catch {}
-  }
-
-  async function loadUserContribution() {
-    if (!campaign || !userAddress) return;
-    try {
-  const contract = await getCrowdfundReadContract();
-      if (contract) {
-        const contribution = await contract.getUserContribution(campaign.id, userAddress);
-        setUserContribution(contribution);
-      }
-  } catch {}
-  }
+  }, [campaign, isOpen, userAddress]);
 
   async function handlePledge() {
     if (!campaign || !contributionAmount) return;
@@ -90,8 +90,9 @@ export default function CampaignDetailModal({
       onRefresh();
   onClose();
       toast.success("Contribution successful!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to contribute");
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(err.message || "Failed to contribute");
     } finally {
       setIsSubmitting(false);
     }
@@ -111,8 +112,9 @@ export default function CampaignDetailModal({
       onRefresh();
   onClose();
       toast.success("Withdrawal successful!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to withdraw");
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(err.message || "Failed to withdraw");
     } finally {
       setIsSubmitting(false);
     }
@@ -131,8 +133,9 @@ export default function CampaignDetailModal({
       
       onRefresh();
       toast.success("Refund successful!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to refund");
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(err.message || "Failed to refund");
     } finally {
       setIsSubmitting(false);
     }
@@ -322,7 +325,7 @@ export default function CampaignDetailModal({
                   {isGuestMode ? (
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-sm text-black mb-3">
-                        <span className="font-semibold">👤 You're viewing in guest mode.</span> Connect your wallet to contribute to this campaign.
+                        <span className="font-semibold">👤 You&apos;re viewing in guest mode.</span> Connect your wallet to contribute to this campaign.
                       </p>
                       <button
                         onClick={() => {
@@ -330,8 +333,11 @@ export default function CampaignDetailModal({
                             onRequestWalletConnect();
                           } else {
                             // Fallback: try to connect directly
-                            if (typeof window !== 'undefined' && (window as any).ethereum) {
-                              (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+                            if (typeof window !== 'undefined') {
+                              const ethereum = (window as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum;
+                              if (ethereum) {
+                                ethereum.request({ method: 'eth_requestAccounts' });
+                              }
                             }
                           }
                         }}
