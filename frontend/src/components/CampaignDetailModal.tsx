@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { getUserDisplayName } from "@/utils/userMapping";
 import { ethers } from "ethers";
-import { getCrowdfundContract, getCrowdfundReadContract } from "@/lib/web3";
+import { getCrowdfundContract, getCrowdfundReadContract, getBrowserProvider } from "@/lib/web3";
 import { toast } from "react-hot-toast";
 import type { Campaign, Reward } from "@/types";
+import { parseTransactionError, checkBalance } from "@/utils/errorHandler";
 
 interface CampaignDetailModalProps {
   campaign: Campaign | null;
@@ -68,19 +69,51 @@ export default function CampaignDetailModal({
     try {
       const contract = await getCrowdfundContract();
       if (!contract) throw new Error("Contract not available");
-      
+
       const amount = ethers.parseEther(contributionAmount);
+
+      // Check balance before attempting transaction
+      const provider = getBrowserProvider();
+      if (userAddress && provider) {
+        const balanceCheck = await checkBalance(amount, userAddress, provider);
+        if (!balanceCheck.sufficient) {
+          const shortfallEth = ethers.formatEther(balanceCheck.shortfall);
+          const balanceEth = ethers.formatEther(balanceCheck.balance);
+          const neededEth = ethers.formatEther(balanceCheck.needed);
+          toast.error(
+            `Insufficient funds. You need ${neededEth} ETH (including gas) but only have ${balanceEth} ETH. Please add at least ${shortfallEth} more ETH.`,
+            { duration: 6000 }
+          );
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       // Client-side checks to mirror contract constraints
       if (selectedReward >= 0 && rewards[selectedReward]) {
         const r = rewards[selectedReward];
         if (amount < r.minimumContribution) {
-          throw new Error("Contribution below reward minimum");
+          toast.error(`Contribution below reward minimum. Minimum is ${ethers.formatEther(r.minimumContribution)} ETH.`);
+          setIsSubmitting(false);
+          return;
         }
         if (r.quantityAvailable > 0n && r.claimedCount >= r.quantityAvailable) {
-          throw new Error("Reward sold out");
+          toast.error("This reward is sold out. Please select a different reward or contribute without a reward.");
+          setIsSubmitting(false);
+          return;
         }
       }
       const rewardIndex = selectedReward >= 0 ? selectedReward : Number.MAX_SAFE_INTEGER; // any large index => treated as no reward
+      
+      // Estimate gas to catch errors early
+      try {
+        await contract.pledge.estimateGas(campaign.id, rewardIndex, { value: amount });
+      } catch (estimateError: unknown) {
+        const parsed = parseTransactionError(estimateError);
+        toast.error(parsed.userFriendly, { duration: 6000 });
+        setIsSubmitting(false);
+        return;
+      }
       
       const tx = await contract.pledge(campaign.id, rewardIndex, { value: amount });
       await tx.wait();
@@ -88,11 +121,11 @@ export default function CampaignDetailModal({
       setContributionAmount("");
       setSelectedReward(-1);
       onRefresh();
-  onClose();
+      onClose();
       toast.success("Contribution successful!");
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      toast.error(err.message || "Failed to contribute");
+      const parsed = parseTransactionError(error);
+      toast.error(parsed.userFriendly, { duration: 6000 });
     } finally {
       setIsSubmitting(false);
     }
@@ -105,16 +138,38 @@ export default function CampaignDetailModal({
     try {
       const contract = await getCrowdfundContract();
       if (!contract) throw new Error("Contract not available");
+
+      // Check balance for gas
+      const provider = getBrowserProvider();
+      if (userAddress && provider) {
+        const balanceCheck = await checkBalance(0n, userAddress, provider);
+        if (!balanceCheck.sufficient && balanceCheck.balance < balanceCheck.needed) {
+          const shortfallEth = ethers.formatEther(balanceCheck.shortfall);
+          toast.error(`Insufficient funds for gas fees. You need at least ${shortfallEth} more ETH to cover transaction fees.`, { duration: 6000 });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // Estimate gas to catch errors early
+      try {
+        await contract.withdraw.estimateGas(campaign.id);
+      } catch (estimateError: unknown) {
+        const parsed = parseTransactionError(estimateError);
+        toast.error(parsed.userFriendly, { duration: 6000 });
+        setIsSubmitting(false);
+        return;
+      }
       
       const tx = await contract.withdraw(campaign.id);
       await tx.wait();
       
       onRefresh();
-  onClose();
+      onClose();
       toast.success("Withdrawal successful!");
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      toast.error(err.message || "Failed to withdraw");
+      const parsed = parseTransactionError(error);
+      toast.error(parsed.userFriendly, { duration: 6000 });
     } finally {
       setIsSubmitting(false);
     }
@@ -127,6 +182,28 @@ export default function CampaignDetailModal({
     try {
       const contract = await getCrowdfundContract();
       if (!contract) throw new Error("Contract not available");
+
+      // Check balance for gas
+      const provider = getBrowserProvider();
+      if (userAddress && provider) {
+        const balanceCheck = await checkBalance(0n, userAddress, provider);
+        if (!balanceCheck.sufficient && balanceCheck.balance < balanceCheck.needed) {
+          const shortfallEth = ethers.formatEther(balanceCheck.shortfall);
+          toast.error(`Insufficient funds for gas fees. You need at least ${shortfallEth} more ETH to cover transaction fees.`, { duration: 6000 });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // Estimate gas to catch errors early
+      try {
+        await contract.refund.estimateGas(campaign.id);
+      } catch (estimateError: unknown) {
+        const parsed = parseTransactionError(estimateError);
+        toast.error(parsed.userFriendly, { duration: 6000 });
+        setIsSubmitting(false);
+        return;
+      }
       
       const tx = await contract.refund(campaign.id);
       await tx.wait();
@@ -134,8 +211,8 @@ export default function CampaignDetailModal({
       onRefresh();
       toast.success("Refund successful!");
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      toast.error(err.message || "Failed to refund");
+      const parsed = parseTransactionError(error);
+      toast.error(parsed.userFriendly, { duration: 6000 });
     } finally {
       setIsSubmitting(false);
     }

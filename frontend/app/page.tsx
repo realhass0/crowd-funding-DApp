@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
-import { getCrowdfundContract, getCrowdfundReadContract } from "@/lib/web3";
+import { getCrowdfundContract, getCrowdfundReadContract, getBrowserProvider } from "@/lib/web3";
+import { parseTransactionError, checkBalance } from "@/utils/errorHandler";
 import WalletConnect from "@/components/WalletConnect";
 import CampaignCard from "@/components/CampaignCard";
 import CreateCampaignModal from "@/components/CreateCampaignModal";
@@ -375,13 +376,25 @@ export default function Home() {
       if (!contract) {
         throw new Error("Contract not available - please check if contract is deployed and wallet is connected");
       }
+
+      // Check balance for gas
+      const provider = getBrowserProvider();
+      if (userAccount && provider) {
+        const balanceCheck = await checkBalance(0n, userAccount, provider);
+        if (!balanceCheck.sufficient && balanceCheck.balance < balanceCheck.needed) {
+          const shortfallEth = ethers.formatEther(balanceCheck.shortfall);
+          toast.error(`Insufficient funds for gas fees. You need at least ${shortfallEth} more ETH to cover transaction fees.`, { duration: 6000 });
+          return;
+        }
+      }
+
       // Preflight: estimate gas to catch reverts early with clearer reason
       try {
         await contract.createCampaign.estimateGas(goal, startAt, endAt, metadataURI);
       } catch (err: unknown) {
-        const error = err as { shortMessage?: string; info?: { error?: { message?: string } }; message?: string };
-        const msg = error?.shortMessage || error?.info?.error?.message || error?.message || 'Transaction would fail';
-        throw new Error(msg);
+        const parsed = parseTransactionError(err);
+        toast.error(parsed.userFriendly, { duration: 6000 });
+        return;
       }
 
       const tx = await contract.createCampaign(goal, startAt, endAt, metadataURI);
@@ -395,8 +408,8 @@ export default function Home() {
       
       toast.success("Campaign created successfully!");
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      toast.error(err?.message || "Failed to create campaign");
+      const parsed = parseTransactionError(error);
+      toast.error(parsed.userFriendly, { duration: 6000 });
     }
   }
 
@@ -405,14 +418,34 @@ export default function Home() {
       const contract = await getCrowdfundContract();
       if (!contract) throw new Error("Contract not available");
 
+      // Check balance for gas
+      const provider = getBrowserProvider();
+      if (userAccount && provider) {
+        const balanceCheck = await checkBalance(0n, userAccount, provider);
+        if (!balanceCheck.sufficient && balanceCheck.balance < balanceCheck.needed) {
+          const shortfallEth = ethers.formatEther(balanceCheck.shortfall);
+          toast.error(`Insufficient funds for gas fees. You need at least ${shortfallEth} more ETH to cover transaction fees.`, { duration: 6000 });
+          return;
+        }
+      }
+
+      // Estimate gas to catch errors early
+      try {
+        await contract.addReward.estimateGas(campaignId, title, description, minContribution, quantity);
+      } catch (estimateError: unknown) {
+        const parsed = parseTransactionError(estimateError);
+        toast.error(parsed.userFriendly, { duration: 6000 });
+        return;
+      }
+
       const tx = await contract.addReward(campaignId, title, description, minContribution, quantity);
       await tx.wait();
 
       toast.success("Reward added successfully!");
       setIsAddRewardModalOpen(false);
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      toast.error(err.message || "Failed to add reward");
+      const parsed = parseTransactionError(error);
+      toast.error(parsed.userFriendly, { duration: 6000 });
     }
   }
 
