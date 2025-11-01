@@ -29,7 +29,14 @@ export const USER_MAPPING: UserInfo[] = [
   { id: 17, name: "User 17", address: "0x2546BcD3c84621e976D8185a91A922aE77ECEc30" },
   { id: 18, name: "User 18", address: "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E" },
   { id: 19, name: "User 19", address: "0xdD2FD4581271e230360230F9337D5c0430Bf44C0" },
-  { id: 20, name: "User 20", address: "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199" }
+  { id: 20, name: "User 20", address: "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199" },
+  // Sample campaign creators
+  { id: 101, name: "Eco Innovations", address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0" },
+  { id: 102, name: "TechVentures", address: "0x8ba1f109551bD432803012645Hac136c9c8dF0E4" },
+  { id: 103, name: "Indie Games Studio", address: "0x1234567890123456789012345678901234567890" },
+  { id: 104, name: "FitTech Solutions", address: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd" },
+  { id: 105, name: "Green Energy Co", address: "0xfedcba0987654321098765432109876543210987" },
+  { id: 106, name: "Artisan Coffee Co", address: "0x9876543210987654321098765432109876543210" },
 ];
 
 /**
