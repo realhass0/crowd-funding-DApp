@@ -13,11 +13,17 @@ interface CampaignCardProps {
 
 export default function CampaignCard({ campaign, currentTime, onSelect, userAddress }: CampaignCardProps) {
   const [mounted, setMounted] = useState(false);
+  const [displayTime, setDisplayTime] = useState(currentTime);
 
   // Prevent hydration errors by only rendering time-based content on client
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Update displayTime whenever currentTime prop changes to force re-render
+  useEffect(() => {
+    setDisplayTime(currentTime);
+  }, [currentTime]);
 
   if (!mounted) {
     return (
@@ -32,9 +38,11 @@ export default function CampaignCard({ campaign, currentTime, onSelect, userAddr
     );
   }
 
-  const isNotStarted = currentTime < Number(campaign.startAt);
-  const isActive = currentTime >= Number(campaign.startAt) && currentTime <= Number(campaign.endAt);
-  const isEnded = currentTime > Number(campaign.endAt);
+  // Use displayTime (which updates) instead of currentTime prop directly
+  const timeToUse = displayTime || currentTime;
+  const isNotStarted = timeToUse < Number(campaign.startAt);
+  const isActive = timeToUse >= Number(campaign.startAt) && timeToUse <= Number(campaign.endAt);
+  const isEnded = timeToUse > Number(campaign.endAt);
   const isGoalMet = campaign.pledged >= campaign.goal;
   const progress = Number(campaign.pledged) / Number(campaign.goal);
   
@@ -59,17 +67,27 @@ export default function CampaignCard({ campaign, currentTime, onSelect, userAddr
       return "Ended";
     }
     if (isNotStarted) {
-      const timeLeft = Number(campaign.startAt) - currentTime;
+      const timeLeft = Number(campaign.startAt) - timeToUse;
+      if (timeLeft <= 0) return "Starting now...";
       if (timeLeft < 60) return `⏰ Starts in ${timeLeft}s`;
-      if (timeLeft < 3600) return `⏰ Starts in ${Math.floor(timeLeft / 60)}m ${timeLeft % 60}s`;
+      if (timeLeft < 3600) {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        return `⏰ Starts in ${minutes}m ${seconds}s`;
+      }
       const hours = Math.floor(timeLeft / 3600);
       const minutes = Math.floor((timeLeft % 3600) / 60);
       return `⏰ Starts in ${hours}h ${minutes}m`;
     }
     if (isActive) {
-      const timeLeft = Number(campaign.endAt) - currentTime;
+      const timeLeft = Number(campaign.endAt) - timeToUse;
+      if (timeLeft <= 0) return "Ending now...";
       if (timeLeft < 60) return `⏳ Ends in ${timeLeft}s`;
-      if (timeLeft < 3600) return `⏳ Ends in ${Math.floor(timeLeft / 60)}m ${timeLeft % 60}s`;
+      if (timeLeft < 3600) {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        return `⏳ Ends in ${minutes}m ${seconds}s`;
+      }
       const hours = Math.floor(timeLeft / 3600);
       const minutes = Math.floor((timeLeft % 3600) / 60);
       return `⏳ Ends in ${hours}h ${minutes}m`;

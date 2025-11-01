@@ -13,6 +13,7 @@ interface CampaignDetailModalProps {
   userAddress?: string;
   isGuestMode?: boolean;
   onRefresh: () => void;
+  onRequestWalletConnect?: () => void;
 }
 
 export default function CampaignDetailModal({ 
@@ -22,7 +23,8 @@ export default function CampaignDetailModal({
   currentTime, 
   userAddress,
   isGuestMode = false,
-  onRefresh 
+  onRefresh,
+  onRequestWalletConnect
 }: CampaignDetailModalProps) {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [contributionAmount, setContributionAmount] = useState("");
@@ -322,6 +324,24 @@ export default function CampaignDetailModal({
                       <p className="text-sm text-black mb-3">
                         <span className="font-semibold">👤 You're viewing in guest mode.</span> Connect your wallet to contribute to this campaign.
                       </p>
+                      <button
+                        onClick={() => {
+                          if (onRequestWalletConnect) {
+                            onRequestWalletConnect();
+                          } else {
+                            // Fallback: try to connect directly
+                            if (typeof window !== 'undefined' && (window as any).ethereum) {
+                              (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+                            }
+                          }
+                        }}
+                        className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors font-medium flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                        </svg>
+                        Connect MetaMask
+                      </button>
                     </div>
                   ) : (
                     <div className="space-y-3">

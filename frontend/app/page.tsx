@@ -43,6 +43,12 @@ export default function Home() {
   const [isLoadingUserData, setIsLoadingUserData] = useState(false);
   const [networkInfo, setNetworkInfo] = useState<{chainId: string, name: string} | null>(null);
   const [isGuestMode, setIsGuestMode] = useState<boolean>(false);
+  
+  // Store initial time when component mounts to keep sample campaign timestamps fixed
+  const [initialTime] = useState<number>(() => Math.floor(Date.now() / 1000));
+  
+  // Store sample campaigns separately so they don't get regenerated on every load
+  const [sampleCampaigns] = useState<Campaign[]>(() => getSampleCampaigns(Math.floor(Date.now() / 1000)));
 
   // Keep last known non-zero pledged to show after creator claims (if contract zeroes it)
   const [lastKnownPledged, setLastKnownPledged] = useState<Record<number, bigint>>({});
@@ -77,7 +83,7 @@ export default function Home() {
     setIsLoading(true);
     try {
       // Always load sample campaigns first (for guest mode and demonstration)
-      const sampleCampaigns = getSampleCampaigns(currentTime);
+      // Use the stored sample campaigns (with fixed timestamps from initial load)
       const loadedCampaigns: Campaign[] = [...sampleCampaigns];
       const newLastKnown = { ...lastKnownPledged };
 
@@ -140,8 +146,7 @@ export default function Home() {
       setCampaigns(loadedCampaigns);
     } catch (error) {
       console.error("Failed to load campaigns:", error);
-      // Fallback to sample campaigns only
-      const sampleCampaigns = getSampleCampaigns(currentTime);
+      // Fallback to sample campaigns only (use stored ones with fixed timestamps)
       setCampaigns(sampleCampaigns);
     } finally {
       setIsLoading(false);
@@ -496,7 +501,7 @@ export default function Home() {
                 <p className="text-sm text-blue-600 font-medium">Donate, Bring Ideas and Get Funded</p>
               </div>
               {isGuestMode && !userAccount && (
-                <span className="ml-4 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">Guest Mode</span>
+                <span className="ml-4 px-2 py-1 text-xs bg-gray-100 text-black font-medium rounded-full">Guest Mode</span>
               )}
             </div>
             <WalletConnect onConnect={handleWalletConnect} onDisconnect={handleWalletDisconnect} />
@@ -618,9 +623,9 @@ export default function Home() {
                   {/* Guest Mode Info */}
                   {isGuestMode && !userAccount && (
                     <div className="pt-4 border-t border-gray-200 px-2 py-3">
-                      <div className="text-xs text-gray-600 mb-2 bg-blue-50 p-2 rounded">
+                      <div className="text-xs mb-2 bg-blue-50 p-2 rounded">
                         <p className="font-medium text-black mb-1">👤 Guest Mode</p>
-                        <p className="text-gray-600">Connect wallet to create campaigns and contribute</p>
+                        <p className="text-black font-medium">Connect wallet to create campaigns and contribute</p>
                       </div>
                       <WalletConnect onConnect={handleWalletConnect} onDisconnect={handleWalletDisconnect} />
                     </div>
@@ -814,7 +819,7 @@ export default function Home() {
                         <div className="px-6 py-4 border-b border-gray-200">
                           <h3 className="text-lg font-medium text-black">My Contributions</h3>
                           {isGuestMode && !userAccount && (
-                            <p className="text-sm text-gray-600 mt-1">Connect your wallet to view your contributions</p>
+                            <p className="text-sm text-black font-medium mt-1">Connect your wallet to view your contributions</p>
                           )}
                       </div>
                       <div className="overflow-x-auto">
@@ -910,7 +915,7 @@ export default function Home() {
                           </button>
                         )}
                         {isGuestMode && !userAccount && (
-                          <p className="text-sm text-gray-600">Connect your wallet to create and manage campaigns</p>
+                          <p className="text-sm text-black font-medium">Connect your wallet to create and manage campaigns</p>
                         )}
                       </div>
                       <div className="overflow-x-auto">
@@ -996,7 +1001,7 @@ export default function Home() {
                         <div className="px-6 py-4 border-b border-gray-200">
                           <h3 className="text-lg font-medium text-black">My Rewards</h3>
                           {isGuestMode && !userAccount && (
-                            <p className="text-sm text-gray-600 mt-1">Connect your wallet to view your rewards</p>
+                            <p className="text-sm text-black font-medium mt-1">Connect your wallet to view your rewards</p>
                           )}
                         </div>
                         <div className="p-4">
@@ -1034,7 +1039,7 @@ export default function Home() {
                                     </span>
                                     {ur.status === 'eligible' && (
                                       <span className="text-xs text-gray-500 italic">
-                                        {Number(ur.campaign?.endAt || 0) <= currentTime && ur.campaign?.pledged >= ur.campaign?.goal
+                                        {ur.campaign && Number(ur.campaign.endAt || 0) <= currentTime && ur.campaign.pledged && ur.campaign.goal && ur.campaign.pledged >= ur.campaign.goal
                                           ? 'Waiting for creator to withdraw'
                                           : 'Will auto-claim when campaign succeeds'}
                                       </span>
@@ -1088,6 +1093,19 @@ export default function Home() {
         onRefresh={() => {
           loadCampaigns();
           loadUserData();
+        }}
+        onRequestWalletConnect={() => {
+          // Exit guest mode and trigger wallet connection
+          setIsGuestMode(false);
+          // The WalletConnect component in the header will handle the actual connection
+          // We can also manually trigger it if needed
+          if (typeof window !== 'undefined' && (window as any).ethereum) {
+            (window as any).ethereum.request({ method: 'eth_requestAccounts' }).then(() => {
+              // Connection will be handled by WalletConnect component via event listeners
+            }).catch((err: any) => {
+              console.error("Failed to connect:", err);
+            });
+          }
         }}
       />
 
