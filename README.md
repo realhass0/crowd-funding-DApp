@@ -1,45 +1,72 @@
 # Crowdfunding DApp
 
-A decentralized crowdfunding application built with Solidity, Hardhat, Next.js, and ethers.js. This dApp allows users to create campaigns, contribute funds, add rewards, and manage withdrawals/refunds in a transparent, blockchain-based system.
+A decentralized crowdfunding application built with Solidity, Hardhat, Next.js, and ethers.js. This DApp allows users to create campaigns, contribute funds, add rewards, and manage withdrawals/refunds in a transparent, blockchain-based system.
 
-## 🚀 Features
+**Live Application**: [https://crowdfundiing-dapp.vercel.app/](https://crowdfundiing-dapp.vercel.app/)
 
-- **Campaign Management**: Create campaigns with custom goals, timelines, and metadata
-- **Reward System**: Add tiered rewards to campaigns (Kickstarter-style)
+**Repository**: [https://github.com/AlexKalll/crowd-funding-DApp](https://github.com/AlexKalll/crowd-funding-DApp)
+
+## Features
+
+### Core Functionality
+
+- **Campaign Management**: Create campaigns with custom goals, timelines, and metadata URIs
+- **Reward System**: Add tiered rewards to campaigns with minimum contribution requirements and limited quantities
 - **Contributions**: Pledge ETH to campaigns with optional reward selection
-- **Smart Withdrawals**: Campaign creators can withdraw funds when goals are met
-- **Automatic Refunds**: Contributors can get refunds if campaigns fail
-- **User Dashboard**: Track contributions, created campaigns, and eligible rewards
-- **Real-time Updates**: Live progress bars, countdown timers, and status badges
+- **Smart Withdrawals**: Campaign creators can withdraw funds when goals are met and campaigns have ended
+- **Automatic Refunds**: Contributors can get refunds if campaigns fail to reach their goals
+- **Guest Mode**: Browse campaigns and view project details without connecting a wallet
+- **Sample Campaigns**: Pre-loaded sample campaigns for demonstration purposes
 
-## 🛠️ Tech Stack
+### User Experience
+
+- **Wallet Integration**: Seamless MetaMask connection with automatic network detection
+- **User Dashboard**: Track contributions, created campaigns, and eligible rewards
+- **My Contributions**: View all campaigns you've contributed to with contribution amounts
+- **My Campaigns**: Manage campaigns you've created with quick access to rewards and statistics
+- **My Rewards**: Track reward eligibility, claimed status, and missed rewards
+- **Real-time Updates**: Live progress bars, countdown timers, and status badges
+- **Error Handling**: Comprehensive error handling with user-friendly messages for insufficient funds, transaction failures, and network issues
+- **Balance Validation**: Pre-transaction balance checks to prevent failed transactions
+
+### Technical Features
+
+- **Multi-network Support**: Automatic contract address detection for Sepolia testnet and localhost
+- **Type Safety**: Full TypeScript coverage throughout the application
+- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
+- **Toast Notifications**: User-friendly feedback for all transactions and errors
+- **Loading States**: Smooth loading indicators throughout the application
+
+## Tech Stack
 
 ### Smart Contracts
-- **Solidity** ^0.8.20
-- **Hardhat** ^2.10.0
-- **OpenZeppelin** (ReentrancyGuard)
+
+- Solidity 0.8.28
+- Hardhat 2.10.0
+- OpenZeppelin (ReentrancyGuard)
 
 ### Frontend
-- **Next.js** 15.5.2 (App Router)
-- **React** 19.1.0
-- **TypeScript** ^5
-- **Tailwind CSS** ^4.1.12
-- **ethers.js** ^6.15.0
-- **react-hot-toast** ^2.6.0
 
-## 📋 Prerequisites
+- Next.js 15.5.2 (App Router)
+- React 19.1.0
+- TypeScript 5
+- Tailwind CSS 4.1.12
+- ethers.js 6.15.0
+- react-hot-toast 2.6.0
 
-- **Node.js** >= 18.0.0
-- **npm** or **yarn**
-- **MetaMask** browser extension
-- **Hardhat** (for local blockchain)
+## Prerequisites
 
-## 🏃 Running Locally
+- Node.js >= 18.0.0
+- npm or yarn
+- MetaMask browser extension
+- Hardhat (for local blockchain development)
+
+## Installation
 
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/AlexKalll/crowd-funding-DApp.git
 cd crowd-funding-DApp
 ```
 
@@ -59,9 +86,11 @@ npm install
 cd ..
 ```
 
-### 3. Start Local Blockchain
+## Local Development
 
-In the root directory, start Hardhat network:
+### 1. Start Local Blockchain
+
+In the root directory, start the Hardhat network:
 
 ```bash
 npx hardhat node
@@ -74,9 +103,9 @@ This will:
 
 Keep this terminal window open.
 
-### 4. Deploy Smart Contract
+### 2. Deploy Smart Contract
 
-In a **new terminal** window, deploy the contract to the local network:
+In a new terminal window, deploy the contract to the local network:
 
 ```bash
 npx hardhat run scripts/deploy.ts --network localhost
@@ -85,9 +114,10 @@ npx hardhat run scripts/deploy.ts --network localhost
 This will:
 - Deploy the `Crowdfund.sol` contract
 - Output the contract address
-- Create/update `frontend/src/constants/deployments.localhost.json`
+- Create or update `frontend/src/constants/deployments.localhost.json`
 
-**Important**: Make sure the deployment file contains the contract address:
+Verify the deployment file contains the contract address:
+
 ```json
 {
   "Crowdfund": {
@@ -96,26 +126,26 @@ This will:
 }
 ```
 
-### 5. Configure MetaMask
+### 3. Configure MetaMask
 
 1. Open MetaMask extension
 2. Click the network dropdown (top center)
 3. Select "Add Network" → "Add a network manually"
 4. Enter the following:
-   - **Network Name**: Hardhat Localhost
-   - **RPC URL**: http://127.0.0.1:8545
-   - **Chain ID**: 31337 (or 0x7A69)
-   - **Currency Symbol**: ETH
-   - **Block Explorer**: (leave empty)
+   - Network Name: Hardhat Localhost
+   - RPC URL: http://127.0.0.1:8545
+   - Chain ID: 31337
+   - Currency Symbol: ETH
+   - Block Explorer: (leave empty)
 
 5. Import test accounts:
    - From the Hardhat node terminal, copy private keys
-   - In MetaMask: Settings → Security & Privacy → Reveal Seed Phrase (or use "Import Account")
+   - In MetaMask: Settings → Security & Privacy → Import Account
    - Paste private keys to import test accounts
 
-### 6. Start Frontend Development Server
+### 4. Start Frontend Development Server
 
-In a **new terminal** window:
+In a new terminal window:
 
 ```bash
 cd frontend
@@ -124,193 +154,164 @@ npm run dev
 
 The app will be available at `http://localhost:3000`
 
-### 7. Connect Wallet
+### 5. Connect Wallet
 
 1. Open `http://localhost:3000` in your browser
-2. Click "Connect Wallet" in the top-right
+2. Click "Connect MetaMask" in the top-right corner
 3. Select your MetaMask account
 4. Approve the connection
 
-## 🧪 Testing Locally
+Alternatively, click "Continue as Guest" to browse campaigns without connecting a wallet.
 
-### Testing Workflow
+## Testing Workflow
 
-1. **Create a Campaign**:
-   - Click "Create Campaign" in the sidebar
-   - Set goal (e.g., 10 ETH)
-   - Set start delay (e.g., 1 hour from now)
-   - Set duration (e.g., 7 days)
-   - Add metadata URI (project description or link)
-   - Submit transaction
+### 1. Create a Campaign
 
-2. **Add Rewards** (as creator, before campaign starts):
-   - Go to "My Campaigns"
-   - Click "Add Reward" on your campaign
-   - Add reward tiers (title, description, minimum contribution, quantity)
-   - Save
+1. Connect your wallet
+2. Click "Create Campaign" in the sidebar
+3. Fill in the form:
+   - Goal: e.g., 10 ETH
+   - Start Time: e.g., 1 hour from now
+   - End Time: e.g., 7 days from start time
+   - Metadata URI: Project description or link
+4. Submit the transaction
 
-3. **Contribute** (as different user):
-   - Switch to another MetaMask account
-   - Browse campaigns
-   - Click on a campaign card
-   - Enter contribution amount
-   - Select a reward tier (if available)
-   - Submit pledge
+### 2. Add Rewards
 
-4. **Withdraw** (as creator, after campaign ends and goal met):
-   - Switch back to creator account
-   - View campaign details
-   - Click "Withdraw Funds"
+1. Go to "My Campaigns" in the sidebar
+2. Click on your campaign
+3. Click "Add Reward" button
+4. Fill in reward details:
+   - Title: e.g., "Early Bird Special"
+   - Description: e.g., "Get exclusive access"
+   - Minimum Contribution: e.g., 0.5 ETH
+   - Quantity Available: e.g., 10
+5. Save the reward
 
-5. **Refund** (as contributor, if campaign fails):
-   - View failed campaign
-   - Click "Refund"
+Note: Rewards can only be added before the campaign starts.
 
-### Testing with Multiple Tabs
+### 3. Contribute to Campaigns
 
-For comprehensive testing:
-1. Open multiple browser tabs
-2. Connect each tab to a different MetaMask account
-3. Test creator and contributor workflows simultaneously
+1. Switch to another MetaMask account (or use a different account)
+2. Browse campaigns in the "Browse Campaigns" tab
+3. Click on a campaign card to view details
+4. Enter contribution amount
+5. Select a reward tier (if available)
+6. Submit the pledge
 
-## 🚢 Deploying to Vercel
+### 4. Withdraw Funds
 
-### Step 1: Prepare for Production
+1. Wait for campaign to end
+2. Ensure campaign goal was met
+3. Switch to creator account
+4. View campaign details
+5. Click "Withdraw Funds"
 
-#### 1.1. Update Contract Address
+### 5. Request Refund
 
-For production, you need to deploy your contract to a testnet (e.g., Sepolia, Mumbai) or mainnet. Update `frontend/src/constants/deployments.localhost.json` with your production contract address, or create a new deployment file for the production network.
+1. Find a campaign that failed to reach its goal
+2. Ensure the campaign has ended
+3. View campaign details
+4. Click "Request Refund"
 
-**Option A: Use existing localhost deployment** (for demo/testing only):
-```json
-{
-  "Crowdfund": {
-    "address": "0x...your-deployed-address..."
-  }
-}
+## Deployment
+
+### Deploy Contract to Testnet
+
+1. Create a `.env` file in the root directory:
+
+```
+SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_KEY
+PRIVATE_KEY=your_private_key_here # the metamask account private key which have a sepolia eth 
 ```
 
-**Option B: Create network-specific deployment file**:
-Create `frontend/src/constants/deployments.sepolia.json` and update `web3.ts` to use it based on the network.
-
-#### 1.2. Environment Variables (Optional)
-
-Create `frontend/.env.local` if you need environment-specific config:
-
-```env
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
-NEXT_PUBLIC_NETWORK=sepolia
-```
-
-### Step 2: Build the Frontend
-
-Test the production build locally:
+2. Deploy to Sepolia:
 
 ```bash
-cd frontend
-npm run build
+npx hardhat run scripts/deploy.ts --network sepolia
 ```
 
-If the build succeeds, you're ready to deploy.
+The deployment script will automatically save the contract address to `frontend/src/constants/deployments.sepolia.json`.
 
-### Step 3: Deploy to Vercel
+### Deploy Frontend to Vercel
 
 #### Option A: Deploy via Vercel CLI
 
 1. Install Vercel CLI:
+
 ```bash
 npm install -g vercel
 ```
 
 2. Login to Vercel:
+
 ```bash
 vercel login
 ```
 
 3. Navigate to frontend directory:
+
 ```bash
 cd frontend
 ```
 
 4. Deploy:
+
 ```bash
 vercel
 ```
 
 5. Follow the prompts:
-   - Set up and deploy? **Yes**
+   - Set up and deploy? Yes
    - Which scope? (select your account)
-   - Link to existing project? **No** (or Yes if updating)
+   - Link to existing project? No (or Yes if updating)
    - Project name? (enter a name or press Enter)
    - Directory? `frontend` (or `.` if already in frontend)
-   - Override settings? **No**
-
-6. After deployment, Vercel will provide:
-   - Preview URL
-   - Production URL
+   - Override settings? No
 
 #### Option B: Deploy via Vercel Dashboard
 
-1. **Push to GitHub**:
-   ```bash
-   git add .
-   git commit -m "Prepare for deployment"
-   git push origin main
-   ```
+1. Push to GitHub:
 
-2. **Import Project in Vercel**:
+```bash
+git add .
+git commit -m "Prepare for deployment"
+git push origin main
+```
+
+2. Import Project in Vercel:
    - Go to [vercel.com](https://vercel.com)
    - Sign in with GitHub
    - Click "Add New Project"
    - Import your repository
 
-3. **Configure Project**:
-   - **Root Directory**: `frontend`
-   - **Framework Preset**: Next.js
-   - **Build Command**: `npm run build` (or leave default)
-   - **Output Directory**: `.next` (or leave default)
-   - **Install Command**: `npm install`
+3. Configure Project:
+   - Root Directory: `frontend`
+   - Framework Preset: Next.js
+   - Build Command: `npm run build` (or leave default)
+   - Output Directory: `.next` (or leave default)
+   - Install Command: `npm install`
 
-4. **Environment Variables** (if needed):
-   - Add `NEXT_PUBLIC_CONTRACT_ADDRESS` (if using env vars)
-   - Add any other environment variables
-
-5. **Deploy**:
+4. Deploy:
    - Click "Deploy"
    - Wait for build to complete
    - Access your live URL
 
-### Step 4: Post-Deployment Configuration
-
-1. **Update Network Configuration**:
-   - Ensure users can connect to the correct network (testnet/mainnet)
-   - Update `web3.ts` if needed to support multiple networks
-
-2. **Test the Live App**:
-   - Connect MetaMask
-   - Switch to the correct network
-   - Test key features (create campaign, contribute, etc.)
-
-3. **Share Your Portfolio**:
-   - Use the Vercel-provided URL
-   - Add to your portfolio/resume
-   - Example: `https://crowd-funding-dapp.vercel.app`
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 crowd-funding-DApp/
 ├── contracts/
-│   └── Crowdfund.sol          # Main smart contract
+│   └── Crowdfund.sol              # Main smart contract
 ├── scripts/
-│   └── deploy.ts              # Deployment script
+│   └── deploy.ts                   # Deployment script
 ├── test/
-│   └── Crowdfund.test.ts     # Contract tests
+│   └── Crowdfund.test.ts          # Contract tests
 ├── frontend/
 │   ├── app/
-│   │   ├── page.tsx          # Main page component
-│   │   ├── layout.tsx        # Root layout
-│   │   └── globals.css       # Global styles
+│   │   ├── page.tsx               # Main page component
+│   │   ├── layout.tsx             # Root layout
+│   │   └── globals.css            # Global styles
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── WalletConnect.tsx
@@ -319,86 +320,142 @@ crowd-funding-DApp/
 │   │   │   ├── CampaignDetailModal.tsx
 │   │   │   └── AddRewardModal.tsx
 │   │   ├── lib/
-│   │   │   └── web3.ts       # Web3 utilities
+│   │   │   └── web3.ts            # Web3 utilities
+│   │   ├── utils/
+│   │   │   ├── errorHandler.ts    # Error handling utilities
+│   │   │   └── userMapping.ts     # User name mapping
 │   │   ├── constants/
-│   │   │   ├── Crowdfund.json        # Contract ABI
-│   │   │   └── deployments.localhost.json  # Contract address
-│   │   └── types.ts          # TypeScript interfaces
+│   │   │   ├── Crowdfund.json     # Contract ABI
+│   │   │   ├── deployments.localhost.json
+│   │   │   ├── deployments.sepolia.json
+│   │   │   └── sampleCampaigns.ts
+│   │   └── types.ts               # TypeScript interfaces
 │   ├── package.json
 │   └── next.config.ts
 ├── hardhat.config.ts
-└── package.json
+├── package.json
+└── README.md
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Hardhat Configuration
 
-The default Hardhat config supports local development. For testnet deployment, update `hardhat.config.ts`:
+The `hardhat.config.ts` supports multiple networks:
 
-```typescript
-networks: {
-  sepolia: {
-    url: process.env.SEPOLIA_RPC_URL,
-    accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
-  },
-}
+- `localhost`: Local development network (Chain ID: 31337)
+- `sepolia`: Sepolia testnet (Chain ID: 11155111)
+- `mumbai`: Polygon Mumbai testnet (Chain ID: 80001)
+
+To configure testnet deployment, create a `.env` file with:
+
+```
+SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_KEY
+MUMBAI_RPC_URL=https://polygon-mumbai.infura.io/v3/YOUR_INFURA_KEY
+PRIVATE_KEY=your_private_key_here
 ```
 
-### Next.js Configuration
+### Network Detection
 
-The frontend uses Next.js 15 with Turbopack. Configuration is in `frontend/next.config.ts`.
+The frontend automatically detects the connected network and uses the appropriate contract address:
 
-## 🐛 Troubleshooting
+- Sepolia testnet: Uses `deployments.sepolia.json`
+- Localhost/Hardhat: Uses `deployments.localhost.json`
+
+## Error Handling
+
+The application includes comprehensive error handling for common blockchain transaction errors:
+
+- **Insufficient Funds**: Detailed messages showing required amount, current balance, and shortfall
+- **Transaction Rejection**: Clear notification when user rejects transaction
+- **Network Errors**: Helpful messages for connection issues
+- **Gas Estimation Failures**: Pre-flight checks to catch errors before submission
+- **Contract Reverts**: User-friendly messages for campaign-specific errors (inactive, not creator, etc.)
+
+All errors are displayed with actionable feedback and extended toast durations for better readability.
+
+## Scripts
+
+### Smart Contract Development
+
+```bash
+# Compile contracts
+npx hardhat compile
+
+# Run tests
+npx hardhat test
+
+# Deploy to localhost
+npx hardhat run scripts/deploy.ts --network localhost
+
+# Deploy to Sepolia
+npx hardhat run scripts/deploy.ts --network sepolia
+```
+
+### Frontend Development
+
+```bash
+# Start development server
+cd frontend
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+
+# Run linter
+npm run lint
+```
+
+## Troubleshooting
 
 ### Common Issues
 
-1. **"Contract not available" error**:
-   - Ensure Hardhat node is running
-   - Verify contract is deployed
-   - Check `deployments.localhost.json` has correct address
+**"Contract not available" error**
+- Ensure Hardhat node is running
+- Verify contract is deployed
+- Check deployment JSON file has correct address
+- Ensure you're connected to the correct network in MetaMask
 
-2. **MetaMask connection fails**:
-   - Check network is set to localhost (Chain ID: 31337)
-   - Ensure MetaMask is unlocked
-   - Try refreshing the page
+**MetaMask connection fails**
+- Check network is set to localhost (Chain ID: 31337) for local development
+- Ensure MetaMask is unlocked
+- Try refreshing the page
+- Check browser console for errors
 
-3. **Build errors on Vercel**:
-   - Check Node.js version (should be >= 18)
-   - Verify all dependencies are in `package.json`
-   - Check build logs for specific errors
+**Insufficient funds error**
+- Verify you have enough ETH in your wallet
+- Remember you need ETH for both the transaction amount and gas fees
+- For testnets, use a faucet to get test ETH
 
-4. **Reward status not updating**:
-   - Refresh the page after transactions
-   - Check browser console for errors
-   - Ensure `loadUserData()` is called after relevant transactions
+**Build errors on Vercel**
+- Check Node.js version (should be >= 18)
+- Verify all dependencies are in `package.json`
+- Check build logs for specific errors
+- Ensure TypeScript/ESLint errors are resolved before pushing
 
-## 📝 License
+**Transaction fails silently**
+- Check browser console for error messages
+- Verify network connection
+- Ensure contract address is correct for the network
+- Check MetaMask transaction history
+
+**Reward status not updating**
+- Refresh the page after transactions
+- Check browser console for errors
+- Ensure network connection is stable
+- Verify the transaction was confirmed on the blockchain
+
+## License
 
 ISC
 
-## 👨‍💻 Development
+## Contributing
 
-### Running Tests
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
 
-```bash
-npx hardhat test
-```
+## Support
 
-### Compiling Contracts
-
-```bash
-npx hardhat compile
-```
-
-### Type Generation
-
-TypeScript types are auto-generated by Hardhat in `typechain-types/`.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📧 Contact
-
-For questions or issues, please open an issue on GitHub.
+For questions, issues, or feature requests, please open an issue on [GitHub](https://github.com/AlexKalll/crowd-funding-DApp/issues).
